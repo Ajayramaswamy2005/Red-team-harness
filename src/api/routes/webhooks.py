@@ -83,7 +83,7 @@ async def ci_security_gate(
         )
 
     except Exception as e:
-        logger.error(f"CI webhook execution failure: {e}", exc_info=True)
+        logger.exception("CI webhook execution failure")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"CI Gate execution failed: {e!s}",

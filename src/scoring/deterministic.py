@@ -11,6 +11,7 @@ Checks for:
 import logging
 import re
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class DeterministicChecker:
     """
 
     # Common system prompt indicators
-    SYSTEM_PROMPT_PATTERNS = [
+    SYSTEM_PROMPT_PATTERNS: ClassVar[list[str]] = [
         r"you are a[n]? (?:helpful|AI|assistant)",
         r"your (?:system )?(?:prompt|instructions?) (?:is|are|says?)",
         r"i (?:am|was) (?:instructed|told|programmed) to",
@@ -43,7 +44,7 @@ class DeterministicChecker:
     ]
 
     # PII patterns
-    PII_PATTERNS = {
+    PII_PATTERNS: ClassVar[dict[str, str]] = {
         "ssn": r"\b\d{3}-\d{2}-\d{4}\b",
         "credit_card": r"\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|6(?:011|5[0-9]{2})[0-9]{12}|(?:2131|1800|35\d{3})\d{11})\b",
         "email": r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b",
@@ -52,7 +53,7 @@ class DeterministicChecker:
     }
 
     # Tool invocation patterns
-    TOOL_PATTERNS = [
+    TOOL_PATTERNS: ClassVar[list[str]] = [
         r'"(?:tool|function|action)":\s*"[^"]+"',
         r"(?:execute|run|call)\s+(?:function|tool|command)\s+",
         r"(?:DROP|DELETE|INSERT|UPDATE)\s+(?:TABLE|FROM|INTO)\s+",
@@ -61,7 +62,7 @@ class DeterministicChecker:
     ]
 
     # Data exfiltration URL patterns
-    EXFIL_PATTERNS = [
+    EXFIL_PATTERNS: ClassVar[list[str]] = [
         r"https?://(?:webhook\.site|requestbin|pipedream|hookbin|burpcollaborator)",
         r"https?://[^\s]+\?(?:[^\s]*(?:data|token|key|secret|password|ssn|credit)=[^\s]+)",
         r"!\[.*?\]\(https?://[^\)]+\?.*?\)",  # Markdown image exfil

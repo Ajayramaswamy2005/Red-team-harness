@@ -86,8 +86,8 @@ async def _run_execution_task(
             await finding_gen.process_run(test_run)
 
             logger.info(f"Completed run_id={run_id} and processed findings")
-        except Exception as e:
-            logger.error(f"Error during background run execution: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Error during background run execution")
 
 
 @router.post("", response_model=TestRunResponse, status_code=status.HTTP_202_ACCEPTED)

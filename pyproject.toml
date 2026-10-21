@@ -47,5 +47,13 @@ where = ["."]
 [tool.ruff]
 line-length = 100
 
+[tool.ruff.lint]
+# Deliberately kept, not bugs:
+#   B008  — FastAPI's Depends()/Query() in argument defaults is the framework idiom.
+#   BLE001/S110 — the harness intentionally catches broad exceptions around target
+#           calls, the LLM judge, and GitHub so one failure never aborts a run.
+#   ASYNC230 — the only blocking open() is one-time YAML seed loading at startup.
+ignore = ["B008", "BLE001", "S110", "ASYNC230"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
