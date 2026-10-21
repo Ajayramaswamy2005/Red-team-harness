@@ -3,21 +3,20 @@ Finding generator — creates findings from failed test results.
 Handles deduplication, severity computation, and GitHub filing.
 """
 
-import uuid
 import logging
-from datetime import datetime, timezone
+import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.attack import Attack
-from src.models.run import TestRun, TestResult
-from src.models.finding import Finding
-from src.models.regression import RegressionCase
-from src.scoring.outcomes import Outcome
-from src.findings.severity import compute_severity
 from src.findings.deduplicator import Deduplicator
 from src.findings.github_reporter import GitHubReporter
+from src.findings.severity import compute_severity
+from src.models.attack import Attack
+from src.models.finding import Finding
+from src.models.regression import RegressionCase
+from src.models.run import TestResult, TestRun
+from src.scoring.outcomes import Outcome
 
 logger = logging.getLogger(__name__)
 

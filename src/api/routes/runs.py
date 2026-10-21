@@ -2,31 +2,31 @@
 Test Runs API router — trigger, list, inspect runs and audit result logs.
 """
 
-import uuid
 import logging
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, status
-from sqlalchemy import select, func
-from sqlalchemy.orm import selectinload
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from src.config import settings
-from src.database import async_session_factory
 from src.api.deps import get_db
 from src.api.schemas import (
     RunTriggerRequest,
-    TestRunResponse,
+    TestResultResponse,
     TestRunDetailResponse,
     TestRunListResponse,
-    TestResultResponse,
+    TestRunResponse,
 )
-from src.models.run import TestRun, TestResult
-from src.targets import RagTarget, AgentTarget, HttpTarget, TargetAdapter
-from src.runner.engine import TestRunner
-from src.scoring.pipeline import ScoringPipeline
+from src.config import settings
+from src.database import async_session_factory
 from src.findings.generator import FindingGenerator
+from src.models.run import TestResult, TestRun
+from src.runner.engine import TestRunner
 from src.scoring.outcomes import Outcome
+from src.scoring.pipeline import ScoringPipeline
+from src.targets import AgentTarget, HttpTarget, RagTarget, TargetAdapter
 
 logger = logging.getLogger(__name__)
 

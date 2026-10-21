@@ -4,11 +4,12 @@ Validates pattern matching for prompt leaks, PII, tool invocations, and exfiltra
 """
 
 import pytest
-from src.scoring.deterministic import DeterministicChecker
-from src.scoring.pipeline import ScoringPipeline
-from src.scoring.outcomes import Outcome
+
 from src.attacks.categories import AttackCategory, Severity
 from src.models.attack import Attack
+from src.scoring.deterministic import DeterministicChecker
+from src.scoring.outcomes import Outcome
+from src.scoring.pipeline import ScoringPipeline
 
 
 def test_deterministic_system_prompt_leak():

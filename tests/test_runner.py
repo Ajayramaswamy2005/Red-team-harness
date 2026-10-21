@@ -2,22 +2,19 @@
 Tests for TestRunner, rate limiter, and regression suite execution.
 """
 
-import time
 import uuid
-import pytest
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-from src.database import Base
-from src.models.attack import Attack
-from src.models.finding import Finding
-from src.models.regression import RegressionCase
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from src.attacks.categories import AttackCategory, Severity
-from src.runner.rate_limiter import TokenBucketRateLimiter
-from src.runner.engine import TestRunner
-from src.targets.base import TargetAdapter, TargetResponse
-from src.scoring.pipeline import ScoringPipeline
-from src.scoring.outcomes import Outcome
+from src.database import Base
 from src.findings.generator import FindingGenerator
+from src.models.attack import Attack
+from src.runner.engine import TestRunner
+from src.runner.rate_limiter import TokenBucketRateLimiter
+from src.scoring.pipeline import ScoringPipeline
+from src.targets.base import TargetAdapter, TargetResponse
 
 
 class MockSafeTarget(TargetAdapter):
@@ -163,6 +160,7 @@ async def test_run_full_battery_reuses_placeholder_run_id(tmp_path):
         await conn.run_sync(Base.metadata.create_all)
 
     from sqlalchemy import select
+
     from src.models.run import TestRun
 
     pre_id = uuid.uuid4()

@@ -2,25 +2,25 @@
 Findings API router — inspect security findings, reproduction steps, mitigations, and issue syncing.
 """
 
-import uuid
 import logging
-from datetime import datetime, timezone
+import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_db
 from src.api.schemas import (
-    FindingResponse,
     FindingListResponse,
+    FindingResponse,
     FindingStatusUpdate,
 )
-from src.models.finding import Finding
-from src.models.attack import Attack
 from src.attacks.categories import AttackCategory, Severity
 from src.findings.github_reporter import GitHubReporter
+from src.models.attack import Attack
+from src.models.finding import Finding
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +143,7 @@ async def update_finding_status(
 
     finding.status = status_update.status
     if status_update.status == "fixed":
-        finding.closed_at = datetime.now(timezone.utc)
+        finding.closed_at = datetime.now(UTC)
     elif status_update.status == "open":
         finding.closed_at = None
 

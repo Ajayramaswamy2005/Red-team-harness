@@ -3,12 +3,12 @@ Regressions API router — permanent test cases from confirmed findings.
 Enforces the rule that fixed vulnerabilities must never regress.
 """
 
-import uuid
 import logging
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_db
@@ -17,11 +17,11 @@ from src.api.schemas import (
     RegressionListResponse,
     TestRunResponse,
 )
+from src.config import settings
 from src.models.regression import RegressionCase
-from src.targets import RagTarget, AgentTarget, HttpTarget, TargetAdapter
 from src.runner.engine import TestRunner
 from src.scoring.pipeline import ScoringPipeline
-from src.config import settings
+from src.targets import AgentTarget, HttpTarget, RagTarget, TargetAdapter
 
 logger = logging.getLogger(__name__)
 

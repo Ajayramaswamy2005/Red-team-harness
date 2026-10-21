@@ -6,11 +6,11 @@ Provides type validation, serialization, and OpenAPI documentation.
 import uuid
 from datetime import datetime
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 from src.attacks.categories import AttackCategory, Severity
 from src.scoring.outcomes import Outcome
-
 
 # ── Attacks ───────────────────────────────────────────────────
 

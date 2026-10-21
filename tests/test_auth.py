@@ -2,15 +2,14 @@
 Tests for API-key authentication and the key-hashing helper.
 """
 
-import hmac
 
 import httpx
 import pytest
 from httpx import ASGITransport
 
-from src.config import settings
 from src.api.security import hash_key, require_api_key
 from src.api.server import app
+from src.config import settings
 
 
 def test_hash_key_is_stable_and_sha256():

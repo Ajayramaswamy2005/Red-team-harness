@@ -5,20 +5,19 @@ Dashboard API router — serves the HTML dashboard UI and aggregated analytics e
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from fastapi import Request
-from sqlalchemy import select, func, case
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_db
 from src.api.security import require_api_key
+from src.attacks.categories import AttackCategory
 from src.models.attack import Attack
-from src.models.run import TestRun, TestResult
 from src.models.finding import Finding
 from src.models.regression import RegressionCase
-from src.attacks.categories import AttackCategory
+from src.models.run import TestResult, TestRun
 from src.scoring.outcomes import Outcome
 
 router = APIRouter(tags=["Dashboard"])

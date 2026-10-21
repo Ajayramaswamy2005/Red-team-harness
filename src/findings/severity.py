@@ -4,7 +4,6 @@ Severity matrix — maps exploitability × impact to severity levels.
 
 from src.attacks.categories import AttackCategory, Severity
 
-
 # Exploitability × Impact matrix
 # Each attack category has a default exploitability and impact rating
 CATEGORY_RISK_PROFILE: dict[str, dict[str, str]] = {

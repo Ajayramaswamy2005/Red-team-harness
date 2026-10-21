@@ -16,9 +16,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+import src.models  # noqa: F401
 from src.config import settings
 from src.database import Base
-import src.models  # noqa: F401
 
 target_metadata = Base.metadata
 config.set_main_option("sqlalchemy.url", settings.database_url)

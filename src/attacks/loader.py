@@ -3,16 +3,16 @@ Attack loader — reads YAML seed files and loads them into the database.
 Also supports importing from garak and PyRIT adapters.
 """
 
-import yaml
-import uuid
 import logging
+import uuid
 from pathlib import Path
 
+import yaml
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.attack import Attack
 from src.attacks.categories import AttackCategory, Severity
+from src.models.attack import Attack
 
 logger = logging.getLogger(__name__)
 

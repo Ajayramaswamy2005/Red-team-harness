@@ -10,7 +10,6 @@ import logging
 from typing import Any
 
 from src.config import settings
-from src.scoring.outcomes import Outcome
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +136,7 @@ class LLMJudge:
             return {
                 "outcome": "NEEDS_REVIEW",
                 "confidence": 0.0,
-                "reasoning": f"Judge error: {str(e)}",
+                "reasoning": f"Judge error: {e!s}",
                 "violations": [],
             }
 

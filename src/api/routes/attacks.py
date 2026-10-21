@@ -2,24 +2,24 @@
 Attacks API router — CRUD operations and seeding for attack battery.
 """
 
-import uuid
 import logging
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_db
 from src.api.schemas import (
     AttackCreate,
-    AttackUpdate,
-    AttackResponse,
     AttackListResponse,
+    AttackResponse,
+    AttackUpdate,
 )
-from src.models.attack import Attack
 from src.attacks.categories import AttackCategory, Severity
 from src.attacks.loader import load_yaml_seeds
+from src.models.attack import Attack
 
 logger = logging.getLogger(__name__)
 

@@ -128,8 +128,8 @@ When deterministic checks are inconclusive, the Claude API LLM judge evaluates n
 ### 1. Installation
 
 ```bash
-git clone https://github.com/ajayr/Red-team-Harness.git
-cd Red-team-Harness
+git clone https://github.com/Ajayramaswamy2005/Red-team-harness.git
+cd Red-team-harness
 
 # Create and activate virtual environment
 python -m venv .venv
@@ -164,51 +164,59 @@ GITHUB_TOKEN=your_pat_here
 GITHUB_REPO=your-org/your-repo
 GITHUB_ENABLED=false
 
+# Authentication — required on every endpoint except /api/health.
+# For an isolated local run you may set AUTH_ENABLED=false.
+AUTH_ENABLED=true
+API_KEY_HASHES=        # SHA-256 hash(es) of your key(s) — see step 3
+
+# CORS — exact browser origins allowed cross-origin (empty = same-origin only)
+CORS_ALLOW_ORIGINS=
+
 # Target URLs
 RAG_TARGET_URL=http://localhost:8001/api/chat
 AGENT_TARGET_URL=http://localhost:8002/api/chat
 ```
 
-### 3. Launch Docker Database (Optional)
+### 3. Generate an API key
+
+The server stores only the **SHA-256 hash** of each key (raw keys are never kept server-side):
 
 ```bash
-docker compose up -d
+python -m src.api.security --generate
 ```
+
+This prints a random key (give it to clients) and its hash. Put the hash in
+`API_KEY_HASHES` (comma-separate multiple). To hash a key you chose yourself:
+`python -m src.api.security "my-key"`.
 
 ### 4. Run the Test Suite
 
 ```bash
-pytest tests/ -v
-```
-
-Expected output:
-```
-============================= test session starts =============================
-tests/test_dedup.py::test_dedup_signature_computation PASSED             [  8%]
-tests/test_dedup.py::test_deduplicator_is_duplicate PASSED               [ 16%]
-tests/test_runner.py::test_token_bucket_rate_limiter PASSED              [ 25%]
-tests/test_runner.py::test_test_runner_safe_target_all_pass PASSED       [ 33%]
-tests/test_runner.py::test_test_runner_vulnerable_target_findings_and_regressions PASSED [ 41%]
-tests/test_scoring.py::test_deterministic_system_prompt_leak PASSED      [ 50%]
-tests/test_scoring.py::test_deterministic_pii_detection PASSED           [ 58%]
-tests/test_scoring.py::test_deterministic_tool_abuse_detection PASSED    [ 66%]
-tests/test_scoring.py::test_deterministic_data_exfiltration PASSED       [ 75%]
-tests/test_scoring.py::test_deterministic_refusal_detection PASSED       [ 83%]
-tests/test_scoring.py::test_scoring_pipeline_safe_refusal PASSED         [ 91%]
-tests/test_scoring.py::test_scoring_pipeline_prompt_leak_failure PASSED  [100%]
-============================= 12 passed in 0.87s ==============================
+pytest tests/ -v   # 20 passed
 ```
 
 ### 5. Start the Server & Dashboard
 
+**Option A — Docker (full stack: app + PostgreSQL):**
+```bash
+docker compose up -d --build
+```
+
+**Option B — Local (uses SQLite by default):**
 ```bash
 uvicorn src.api.server:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Open your browser to:
-- **Operations Dashboard:** [http://localhost:8000](http://localhost:8000)
+- **Operations Dashboard:** [http://localhost:8000](http://localhost:8000) — prompts once for your API key
 - **Interactive Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Built-in Mock Target:** `http://localhost:8000/api/mock/chat`
+- **Health check (public):** `http://localhost:8000/api/health`
+
+API clients authenticate with the raw key:
+```bash
+curl http://localhost:8000/api/attacks \
+  -H "Authorization: Bearer <your-key>"   # or:  -H "X-API-Key: <your-key>"
+```
 
 ---
 

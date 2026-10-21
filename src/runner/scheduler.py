@@ -3,7 +3,7 @@ APScheduler integration for scheduled red-team runs.
 """
 
 import logging
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger

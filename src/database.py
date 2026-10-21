@@ -2,7 +2,7 @@
 Async SQLAlchemy engine, session factory, and Base class.
 """
 
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from src.config import settings
@@ -25,7 +25,6 @@ async_session_factory = async_sessionmaker(
 
 class Base(DeclarativeBase):
     """Base class for all ORM models."""
-    pass
 
 
 async def get_session() -> AsyncSession:

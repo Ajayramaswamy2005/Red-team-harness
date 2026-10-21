@@ -6,23 +6,22 @@ Exposes REST APIs, CI/CD webhook, interactive dashboard, and mock testing endpoi
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select, func
-
-from src.config import settings
-from src.database import init_db, close_db, async_session_factory
-from src.models.attack import Attack
-from src.attacks.loader import load_yaml_seeds
-from src.api.security import require_api_key
-from src.runner.scheduler import RedTeamScheduler
+from sqlalchemy import func, select
 
 from src.api.routes.attacks import router as attacks_router
-from src.api.routes.runs import router as runs_router
 from src.api.routes.findings import router as findings_router
 from src.api.routes.regressions import router as regressions_router
+from src.api.routes.runs import router as runs_router
 from src.api.routes.webhooks import router as webhooks_router
+from src.api.security import require_api_key
+from src.attacks.loader import load_yaml_seeds
+from src.config import settings
 from src.dashboard.routes import router as dashboard_router
+from src.database import async_session_factory, close_db, init_db
+from src.models.attack import Attack
+from src.runner.scheduler import RedTeamScheduler
 
 # Setup logging
 logging.basicConfig(

@@ -4,8 +4,8 @@ Prevents the harness from being the thing that takes the app down.
 """
 
 import asyncio
-import time
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 

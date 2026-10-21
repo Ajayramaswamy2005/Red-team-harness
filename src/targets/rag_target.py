@@ -3,14 +3,14 @@ RAG-specific target adapter for Project 1.
 Includes support for poisoned document injection.
 """
 
-import time
 import logging
+import time
 from typing import Any
 
 import httpx
 
-from src.targets.base import TargetAdapter, TargetResponse
 from src.config import settings
+from src.targets.base import TargetAdapter, TargetResponse
 
 logger = logging.getLogger(__name__)
 

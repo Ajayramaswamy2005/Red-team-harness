@@ -10,11 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_db
 from src.api.schemas import CIWebhookPayload, CIWebhookResponse
-from src.targets import RagTarget, AgentTarget, HttpTarget, TargetAdapter
+from src.config import settings
+from src.findings.generator import FindingGenerator
 from src.runner.engine import TestRunner
 from src.scoring.pipeline import ScoringPipeline
-from src.findings.generator import FindingGenerator
-from src.config import settings
+from src.targets import AgentTarget, HttpTarget, RagTarget, TargetAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -86,5 +86,5 @@ async def ci_security_gate(
         logger.error(f"CI webhook execution failure: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"CI Gate execution failed: {str(e)}",
+            detail=f"CI Gate execution failed: {e!s}",
         )

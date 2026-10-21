@@ -4,16 +4,17 @@ Ensures identical exploit responses are not repeatedly filed as duplicate issues
 """
 
 import uuid
-import pytest
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from src.attacks.categories import AttackCategory, Severity
 from src.database import Base
+from src.findings.deduplicator import Deduplicator
 from src.models.attack import Attack
 from src.models.finding import Finding
-from src.models.run import TestRun, TestResult
-from src.attacks.categories import AttackCategory, Severity
+from src.models.run import TestResult, TestRun
 from src.scoring.outcomes import Outcome
-from src.findings.deduplicator import Deduplicator
 
 
 def test_dedup_signature_computation():

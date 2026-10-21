@@ -2,7 +2,7 @@
 API dependencies — database session and common utilities.
 """
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

@@ -3,8 +3,8 @@ Generic HTTP target adapter.
 Works with any API that accepts a JSON payload and returns text.
 """
 
-import time
 import logging
+import time
 from typing import Any
 
 import httpx

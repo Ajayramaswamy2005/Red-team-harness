@@ -11,9 +11,9 @@ import logging
 from typing import Any
 
 from src.models.attack import Attack
-from src.scoring.outcomes import Outcome
 from src.scoring.deterministic import DeterministicChecker
 from src.scoring.llm_judge import LLMJudge
+from src.scoring.outcomes import Outcome
 
 logger = logging.getLogger(__name__)
 

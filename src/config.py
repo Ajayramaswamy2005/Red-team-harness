@@ -3,8 +3,8 @@ Centralized configuration via pydantic-settings.
 All values load from .env or environment variables.
 """
 
-from pydantic_settings import BaseSettings
 from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):

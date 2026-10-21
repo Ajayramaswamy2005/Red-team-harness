@@ -4,21 +4,21 @@ Orchestrates sending attacks to targets and collecting results.
 """
 
 import asyncio
-import uuid
-import time
 import logging
-from datetime import datetime, timezone
+import time
+import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.models.attack import Attack
-from src.models.run import TestRun, TestResult
-from src.targets.base import TargetAdapter, TargetResponse
-from src.scoring.pipeline import ScoringPipeline
-from src.scoring.outcomes import Outcome
+from src.models.run import TestResult, TestRun
 from src.runner.rate_limiter import TokenBucketRateLimiter
+from src.scoring.outcomes import Outcome
+from src.scoring.pipeline import ScoringPipeline
+from src.targets.base import TargetAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ class TestRunner:
 
         test_run.status = "completed"
         test_run.duration_seconds = time.perf_counter() - start_time
-        test_run.completed_at = datetime.now(timezone.utc)
+        test_run.completed_at = datetime.now(UTC)
 
         await self.session.commit()
 
@@ -270,7 +270,7 @@ class TestRunner:
                 for rc in regression_cases:
                     if rc.attack_id == r.attack_id:
                         rc.last_run_passed = r.outcome == Outcome.PASS
-                        rc.last_run_at = datetime.now(timezone.utc)
+                        rc.last_run_at = datetime.now(UTC)
                         if r.outcome == Outcome.PASS:
                             rc.consecutive_passes += 1
                         else:
@@ -290,7 +290,7 @@ class TestRunner:
 
         test_run.status = "completed"
         test_run.duration_seconds = time.perf_counter() - start_time
-        test_run.completed_at = datetime.now(timezone.utc)
+        test_run.completed_at = datetime.now(UTC)
 
         await self.session.commit()
 

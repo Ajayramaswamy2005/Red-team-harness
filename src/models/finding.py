@@ -2,15 +2,16 @@
 Finding model — auto-generated security findings with severity and reproduction steps.
 """
 
-import uuid
 import hashlib
-from datetime import datetime, timezone
+import uuid
+from datetime import UTC, datetime
 
-from sqlalchemy import String, Text, DateTime, ForeignKey, Boolean, Enum as SAEnum, Uuid, JSON
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, Uuid
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.database import Base
 from src.attacks.categories import AttackCategory, Severity
+from src.database import Base
 
 
 class Finding(Base):
@@ -64,7 +65,7 @@ class Finding(Base):
     is_regression: Mapped[bool] = mapped_column(Boolean, default=False)
     # Timestamps
     found_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     closed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

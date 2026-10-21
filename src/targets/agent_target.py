@@ -2,13 +2,13 @@
 Agent-specific target adapter for Project 2.
 """
 
-import time
 import logging
+import time
 
 import httpx
 
-from src.targets.base import TargetAdapter, TargetResponse
 from src.config import settings
+from src.targets.base import TargetAdapter, TargetResponse
 
 logger = logging.getLogger(__name__)
 
