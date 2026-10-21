@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automated Red-Team Harness · Security Operations</title>
+    <meta name="description" content="Production-grade AI safety red-teaming harness and regression suite for autonomous agents and RAG applications.">
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <!-- API-key auth: attach the key to same-origin /api requests -->
+    <script>
+      (function () {
+        const KEY = "rth_api_key";
+        function getKey(force) {
+          let k = null;
+          try { k = localStorage.getItem(KEY); } catch (e) {}
+          if (!k || force) {
+            k = window.prompt("Enter your Red-Team Harness API key:") || "";
+            try { if (k) localStorage.setItem(KEY, k); } catch (e) {}
+          }
+          return k;
+        }
+        const _fetch = window.fetch.bind(window);
+        window.fetch = function (input, init) {
+          init = Object.assign({}, init);
+          const url = typeof input === "string" ? input : (input && input.url) || "";
+          const isApi = url.startsWith("/api/") || url.includes(location.host + "/api/");
+          if (!isApi) return _fetch(input, init);
+          function withKey(force) {
+            const headers = new Headers(init.headers || {});
+            const k = getKey(force);
+            if (k) headers.set("Authorization", "Bearer " + k);
+            init.headers = headers;
+          }
+          withKey(false);
+          return _fetch(input, init).then(function (res) {
+            if (res.status === 401) {
+              try { localStorage.removeItem(KEY); } catch (e) {}
+              withKey(true);
+              if ((init.headers instanceof Headers) && init.headers.get("Authorization")) {
+                return _fetch(input, init);
+              }
+            }
+            return res;
+          });
+        };
+        // Expose a way to change the stored key from the console if needed.
+        window.setApiKey = function () { getKey(true); location.reload(); };
+      })();
+    </script>
+    <style>
+        :root {
+            --bg-base: #080B11;
+            --bg-card: rgba(16, 23, 38, 0.75);
+            --bg-card-hover: rgba(23, 32, 54, 0.85);
+            --bg-elevated: #151D2E;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.18);
+            --text-primary: #F3F4F6;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            
+            --accent-crimson: #F43F5E;
+            --accent-crimson-glow: rgba(244, 63, 94, 0.25);
+            --accent-emerald: #10B981;
+            --accent-emerald-glow: rgba(16, 185, 129, 0.25);
+            --accent-amber: #F59E0B;
+            --accent-indigo: #6366F1;
+            --accent-indigo-glow: rgba(99, 102, 241, 0.35);
+            --accent-cyan: #06B6D4;
+            
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(244, 63, 94, 0.06) 0%, transparent 45%);
+            background-attachment: fixed;
+        }
+
+        /* Glassmorphism helpers */
+        .glass-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .glass-panel:hover {
+            border-color: var(--border-hover);
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 28px 32px 64px;
+        }
+
+        /* Header Bar */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 24px;
+            margin-bottom: 28px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .brand-cluster {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .brand-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #E11D48, #881337);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(225, 29, 72, 0.4);
+        }
+        .brand-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: none;
+            stroke: #fff;
+            stroke-width: 2.2;
+        }
+        .brand-title h1 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-title p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .badge-live {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34D399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 20px;
+            letter-spacing: 0.05em;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .badge-live::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10B981;
+            box-shadow: 0 0 8px #10B981;
+            animation: pulse-dot 2s infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .btn {
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 9px 18px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4F46E5, #6366F1);
+            color: #fff;
+            box-shadow: 0 4px 14px var(--accent-indigo-glow);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #E11D48, #F43F5E);
+            color: #fff;
+            box-shadow: 0 4px 14px var(--accent-crimson-glow);
+        }
+        .btn-danger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(244, 63, 94, 0.45);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--border-hover);
+        }
+
+        /* KPI Metric Ribbon */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+        .metric-card {
+            padding: 20px 22px;
+            position: relative;
+            overflow: hidden;
+        }
+        .metric-card::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: transparent;
+        }
+        .card-emerald::after { background: linear-gradient(90deg, #10B981, transparent); }
+        .card-crimson::after { background: linear-gradient(90deg, #F43F5E, transparent); }
+        .card-indigo::after { background: linear-gradient(90deg, #6366F1, transparent); }
+        .card-amber::after { background: linear-gradient(90deg, #F59E0B, transparent); }
+        .card-cyan::after { background: linear-gradient(90deg, #06B6D4, transparent); }
+
+        .metric-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .metric-value {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text-primary);
+        }
+        .metric-sub {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        /* Control Center & Interactive Runner */
+        .runner-section {
+            padding: 24px;
+            margin-bottom: 28px;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .section-header h2 {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .runner-form {
+            display: grid;
+            grid-template-columns: 2fr 2fr 3fr auto;
+            gap: 16px;
+            align-items: end;
+        }
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .form-control {
+            width: 100%;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 13px;
+            padding: 10px 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .form-control:focus {
+            border-color: var(--accent-indigo);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1.2fr;
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+        .chart-card {
+            padding: 22px;
+            height: 340px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .chart-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .chart-container {
+            position: relative;
+            flex: 1;
+            width: 100%;
+        }
+
+        /* Findings & Regression Tables */
+        .tabs-header {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tab-btn.active {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .data-table-wrapper {
+            overflow-x: auto;
+        }
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+        table.data-table th {
+            padding: 12px 16px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        table.data-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary);
+        }
+        table.data-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-primary);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .badge-critical { background: rgba(244, 63, 94, 0.18); color: #FB7185; border: 1px solid rgba(244, 63, 94, 0.4); }
+        .badge-high { background: rgba(249, 115, 22, 0.18); color: #FB923C; border: 1px solid rgba(249, 115, 22, 0.4); }
+        .badge-medium { background: rgba(245, 158, 11, 0.18); color: #FCD34D; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .badge-low { background: rgba(99, 102, 241, 0.18); color: #A5B4FC; border: 1px solid rgba(99, 102, 241, 0.4); }
+        .badge-status-open { background: rgba(239, 68, 68, 0.15); color: #FCA5A5; }
+        .badge-status-fixed { background: rgba(16, 185, 129, 0.15); color: #6EE7B7; }
+
+        /* Slide-over / Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(4, 7, 13, 0.75);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 24px;
+        }
+        .modal-content {
+            background: #111827;
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 820px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
+        }
+        .modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .code-box {
+            background: #0B0F19;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #38BDF8;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            margin-top: 6px;
+        }
+        .field-group {
+            margin-bottom: 18px;
+        }
+        .field-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1F2937;
+            border: 1px solid var(--border-hover);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 2000;
+        }
+
+        @media (max-width: 1200px) {
+            .metrics-grid { grid-template-columns: repeat(3, 1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+            .runner-form { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <header>
+        <div class="brand-cluster">
+            <div class="brand-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <div class="brand-title">
+                <h1>Red-Team Security Harness <span class="badge-live">LIVE GUARD</span></h1>
+                <p>Automated adversarial safety battery & permanent regression gate</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" id="seedBtn" onclick="seedBattery()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Reload Seeds
+            </button>
+            <button class="btn btn-danger" id="runRegressionsBtn" onclick="runRegressionSuite()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+                Run Regressions Gate
+            </button>
+        </div>
+    </header>
+
+    <!-- KPI Metric Ribbon -->
+    <section class="metrics-grid">
+        <div class="glass-panel metric-card card-indigo">
+            <div class="metric-label">Attack Battery Size</div>
+            <div class="metric-value" id="kpiTotalAttacks">--</div>
+            <div class="metric-sub">Across 7 Threat Categories</div>
+        </div>
+        <div class="glass-panel metric-card card-emerald">
+            <div class="metric-label">Suite Pass Rate</div>
+            <div class="metric-value" id="kpiPassRate">--%</div>
+            <div class="metric-sub" id="kpiPassRateSub">Latest execution runs</div>
+        </div>
+        <div class="glass-panel metric-card card-crimson">
+            <div class="metric-label">Open Findings</div>
+            <div class="metric-value" id="kpiOpenFindings">--</div>
+            <div class="metric-sub" id="kpiFindingsSeverity">0 Crit · 0 High</div>
+        </div>
+        <div class="glass-panel metric-card card-cyan">
+            <div class="metric-label">Regression Failures</div>
+            <div class="metric-value" id="kpiRegressions" style="color: #34D399;">0</div>
+            <div class="metric-sub" id="kpiRegTotal">From 0 permanent cases</div>
+        </div>
+        <div class="glass-panel metric-card card-amber">
+            <div class="metric-label">Remediation MTTR</div>
+            <div class="metric-value" id="kpiMTTR">--</div>
+            <div class="metric-sub">Mean Time to Fix (Hours)</div>
+        </div>
+    </section>
+
+    <!-- Run Control Center -->
+    <section class="glass-panel runner-section">
+        <div class="section-header">
+            <h2>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Execute Adversarial Attack Run
+            </h2>
+            <span style="font-size: 12px; color: var(--text-muted);">Rate-limited token bucket + concurrency cap active</span>
+        </div>
+        <div class="runner-form">
+            <div class="form-group">
+                <label for="targetType">Target System</label>
+                <select id="targetType" class="form-control" onchange="updateDefaultUrl()">
+                    <option value="rag">Project 1: RAG Service (/chat)</option>
+                    <option value="agent">Project 2: Agent Service (/chat)</option>
+                    <option value="http">Generic HTTP Target</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="attackCategory">Attack Filter</label>
+                <select id="attackCategory" class="form-control">
+                    <option value="">All Categories (Full Battery)</option>
+                    <option value="jailbreak">Direct Jailbreaks & Personas</option>
+                    <option value="indirect_injection">Indirect Prompt Injection</option>
+                    <option value="prompt_extraction">System Prompt Extraction</option>
+                    <option value="pii_extraction">PII & Sensitive Data Leak</option>
+                    <option value="harmful_content">Domain Harmful Content</option>
+                    <option value="tool_abuse">Tool Abuse & Escalation</option>
+                    <option value="encoding_tricks">Base64 / Encoding Tricks</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="targetUrl">Target Endpoint URL</label>
+                <input type="text" id="targetUrl" class="form-control" value="http://localhost:8001/api/chat" placeholder="http://...">
+            </div>
+            <div class="form-group">
+                <button class="btn btn-primary" id="launchBtn" onclick="triggerRun()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    Launch Battery
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Analytics Charts Grid -->
+    <section class="charts-grid">
+        <div class="glass-panel chart-card">
+            <div class="chart-header">
+                <div class="chart-title">Safety Pass Rate by Category</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+        <div class="glass-panel chart-card">
+            <div class="chart-header">
+                <div class="chart-title">Vulnerability Severity Distribution</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="severityChart"></canvas>
+            </div>
+        </div>
+        <div class="glass-panel chart-card">
+            <div class="chart-header">
+                <div class="chart-title">Security Posture Trend</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- Findings & Regressions Section -->
+    <section class="glass-panel" style="padding: 24px;">
+        <div class="tabs-header">
+            <button class="tab-btn active" id="tabFindings" onclick="switchTab('findings')">Active Security Findings</button>
+            <button class="tab-btn" id="tabRegressions" onclick="switchTab('regressions')">Permanent Regression Suite</button>
+            <button class="tab-btn" id="tabRuns" onclick="switchTab('runs')">Recent Test Runs</button>
+        </div>
+
+        <!-- Findings Table View -->
+        <div id="findingsView" class="data-table-wrapper">
+            <table class="data-table" id="findingsTable">
+                <thead>
+                    <tr>
+                        <th>Severity</th>
+                        <th>Finding Title</th>
+                        <th>Category</th>
+                        <th>Target</th>
+                        <th>Discovered</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="findingsTableBody">
+                    <tr><td colspan="7" style="text-align:center; padding: 28px;">Loading security findings...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Regressions View -->
+        <div id="regressionsView" class="data-table-wrapper" style="display: none;">
+            <table class="data-table" id="regressionsTable">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Target</th>
+                        <th>Consecutive Passes</th>
+                        <th>Last Verified</th>
+                        <th>Payload Sample</th>
+                        <th>Enabled</th>
+                    </tr>
+                </thead>
+                <tbody id="regressionsTableBody">
+                    <tr><td colspan="6" style="text-align:center; padding: 28px;">Loading regression cases...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Runs View -->
+        <div id="runsView" class="data-table-wrapper" style="display: none;">
+            <table class="data-table" id="runsTable">
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>Target</th>
+                        <th>Trigger</th>
+                        <th>Passed</th>
+                        <th>Failed</th>
+                        <th>Pass Rate</th>
+                        <th>Duration</th>
+                        <th>Started</th>
+                    </tr>
+                </thead>
+                <tbody id="runsTableBody">
+                    <tr><td colspan="8" style="text-align:center; padding: 28px;">Loading runs...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<!-- Finding Details Modal -->
+<div class="modal-overlay" id="findingModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div>
+                <span id="modalSeverity" class="badge badge-critical" style="margin-bottom: 8px;">CRITICAL</span>
+                <h2 id="modalTitle" style="font-size: 18px; font-weight: 800;">Finding Details</h2>
+            </div>
+            <button class="btn btn-secondary" onclick="closeModal()">✕</button>
+        </div>
+        <div class="field-group">
+            <div class="field-label">Discovered On Target</div>
+            <div id="modalTarget" style="font-size: 13px; color: #fff; margin-top: 4px;">--</div>
+        </div>
+        <div class="field-group">
+            <div class="field-label">Reproduction Exploit Payload</div>
+            <div id="modalPayload" class="code-box">--</div>
+        </div>
+        <div class="field-group">
+            <div class="field-label">Target Response Received</div>
+            <div id="modalResponse" class="code-box" style="color: #F87171;">--</div>
+        </div>
+        <div class="field-group">
+            <div class="field-label">Recommended Remediation</div>
+            <div id="modalMitigation" style="font-size: 13px; color: #CBD5E1; line-height: 1.6; margin-top: 6px; padding: 12px; background: rgba(99,102,241,0.08); border-left: 3px solid #6366F1; border-radius: 4px;">--</div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle);">
+            <div id="modalGithubLink"></div>
+            <div style="display:flex; gap: 10px;">
+                <button class="btn btn-secondary" id="modalToggleStatusBtn" onclick="toggleFindingStatus()">Mark Fixed</button>
+                <button class="btn btn-primary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toastMsg">Notification message</div>
+
+<script>
+    let categoryChartInstance = null;
+    let severityChartInstance = null;
+    let timelineChartInstance = null;
+    let currentFinding = null;
+
+    function showToast(msg) {
+        const toast = document.getElementById("toastMsg");
+        toast.innerText = msg;
+        toast.style.display = "flex";
+        setTimeout(() => { toast.style.display = "none"; }, 4000);
+    }
+
+    function updateDefaultUrl() {
+        const t = document.getElementById("targetType").value;
+        const input = document.getElementById("targetUrl");
+        if (t === "rag") input.value = "http://localhost:8001/api/chat";
+        else if (t === "agent") input.value = "http://localhost:8002/api/chat";
+        else input.value = "http://localhost:8000/api/mock";
+    }
+
+    async function fetchSummary() {
+        try {
+            const res = await fetch("/api/dashboard/summary");
+            const data = await res.json();
+
+            // Populate KPI Cards
+            document.getElementById("kpiTotalAttacks").innerText = data.total_attacks;
+            document.getElementById("kpiPassRate").innerText = data.overall_pass_rate + "%";
+            document.getElementById("kpiOpenFindings").innerText = data.open_findings;
+            document.getElementById("kpiFindingsSeverity").innerText = 
+                `${data.severity_counts.critical || 0} Crit · ${data.severity_counts.high || 0} High`;
+            
+            const regFail = data.regression_failing || 0;
+            const regElem = document.getElementById("kpiRegressions");
+            regElem.innerText = regFail;
+            regElem.style.color = regFail === 0 ? "#34D399" : "#F43F5E";
+            document.getElementById("kpiRegTotal").innerText = `From ${data.regression_total || 0} permanent cases`;
+            document.getElementById("kpiMTTR").innerText = data.mttr_hours > 0 ? `${data.mttr_hours}h` : "N/A";
+
+            // Render Charts
+            renderCategoryChart(data.category_stats);
+            renderSeverityChart(data.severity_counts);
+            renderTimelineChart(data.timeline);
+        } catch (err) {
+            console.error("Error loading dashboard summary:", err);
+        }
+    }
+
+    function renderCategoryChart(catStats) {
+        const ctx = document.getElementById("categoryChart").getContext("2d");
+        const labels = catStats.map(c => c.category.replace("_", " ").toUpperCase());
+        const passRates = catStats.map(c => c.pass_rate);
+
+        if (categoryChartInstance) categoryChartInstance.destroy();
+
+        categoryChartInstance = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Pass Rate (%)",
+                    data: passRates,
+                    backgroundColor: passRates.map(r => r > 80 ? "rgba(16, 185, 129, 0.7)" : "rgba(244, 63, 94, 0.7)"),
+                    borderColor: passRates.map(r => r > 80 ? "#10B981" : "#F43F5E"),
+                    borderWidth: 1,
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: "rgba(255, 255, 255, 0.05)" },
+                        ticks: { color: "#94A3B8" }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: "#94A3B8", font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderSeverityChart(sevCounts) {
+        const ctx = document.getElementById("severityChart").getContext("2d");
+        const counts = [
+            sevCounts.critical || 0,
+            sevCounts.high || 0,
+            sevCounts.medium || 0,
+            sevCounts.low || 0
+        ];
+
+        if (severityChartInstance) severityChartInstance.destroy();
+
+        severityChartInstance = new Chart(ctx, {
+            type: "doughnut",
+            data: {
+                labels: ["Critical", "High", "Medium", "Low"],
+                datasets: [{
+                    data: counts,
+                    backgroundColor: [
+                        "rgba(244, 63, 94, 0.8)",
+                        "rgba(249, 115, 22, 0.8)",
+                        "rgba(245, 158, 11, 0.8)",
+                        "rgba(99, 102, 241, 0.8)"
+                    ],
+                    borderColor: "#111827",
+                    borderWidth: 3,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: "right",
+                        labels: { color: "#94A3B8", font: { size: 11 }, boxWidth: 12 }
+                    }
+                },
+                cutout: "70%"
+            }
+        });
+    }
+
+    function renderTimelineChart(timeline) {
+        const ctx = document.getElementById("timelineChart").getContext("2d");
+        const labels = timeline.length ? timeline.map(t => t.started_at.split(" ")[1]) : ["No runs yet"];
+        const passRates = timeline.length ? timeline.map(t => t.pass_rate) : [100];
+
+        if (timelineChartInstance) timelineChartInstance.destroy();
+
+        timelineChartInstance = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Run Pass Rate %",
+                    data: passRates,
+                    fill: true,
+                    backgroundColor: "rgba(99, 102, 241, 0.12)",
+                    borderColor: "#6366F1",
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointBackgroundColor: "#818CF8",
+                    pointRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: "rgba(255, 255, 255, 0.05)" },
+                        ticks: { color: "#94A3B8" }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: "#94A3B8", font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    async function loadFindings() {
+        const res = await fetch("/api/findings?limit=50");
+        const data = await res.json();
+        const tbody = document.getElementById("findingsTableBody");
+        if (!data.items.length) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 32px; color: #10B981;">🛡️ No open vulnerabilities found. Battery passing clean.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.items.map(f => `
+            <tr>
+                <td><span class="badge badge-${f.severity}">${f.severity.toUpperCase()}</span></td>
+                <td style="font-weight: 600; color: #F3F4F6;">${f.title}</td>
+                <td><span style="font-size: 11px; text-transform: uppercase; color: #94A3B8;">${f.category}</span></td>
+                <td>${f.target_name}</td>
+                <td>${new Date(f.found_at).toLocaleDateString()}</td>
+                <td><span class="badge badge-status-${f.status}">${f.status.toUpperCase()}</span></td>
+                <td><button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick='openFindingModal(${JSON.stringify(f)})'>Inspect</button></td>
+            </tr>
+        `).join("");
+    }
+
+    async function loadRegressions() {
+        const res = await fetch("/api/regressions?limit=50");
+        const data = await res.json();
+        const tbody = document.getElementById("regressionsTableBody");
+        if (!data.items.length) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 32px; color: #94A3B8;">No confirmed findings converted to regression cases yet.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.items.map(r => `
+            <tr>
+                <td>
+                    <span class="badge ${r.last_run_passed ? 'badge-status-fixed' : (r.last_run_passed === false ? 'badge-critical' : 'badge-low')}">
+                        ${r.last_run_passed ? 'PASSING' : (r.last_run_passed === false ? 'FAILING (REGRESSION)' : 'PENDING')}
+                    </span>
+                </td>
+                <td style="font-weight: 600;">${r.target_name}</td>
+                <td style="color: #34D399; font-weight: 700;">${r.consecutive_passes} Passes</td>
+                <td>${r.last_run_at ? new Date(r.last_run_at).toLocaleString() : 'Never'}</td>
+                <td><span style="font-family: monospace; font-size: 11px; color: #94A3B8;">${r.payload.substring(0, 48)}...</span></td>
+                <td><span style="color: ${r.enabled ? '#34D399' : '#64748B'};">${r.enabled ? 'Active' : 'Disabled'}</span></td>
+            </tr>
+        `).join("");
+    }
+
+    async function loadRuns() {
+        const res = await fetch("/api/runs?limit=20");
+        const data = await res.json();
+        const tbody = document.getElementById("runsTableBody");
+        if (!data.items.length) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 32px; color: #94A3B8;">No test runs yet. Click "Launch Battery" above.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.items.map(r => {
+            const pRate = r.total_attacks > 0 ? Math.round((r.passed / r.total_attacks) * 100) : 100;
+            return `
+                <tr>
+                    <td style="font-family: monospace; font-weight: 600; color: #818CF8;">${r.id.substring(0, 8)}</td>
+                    <td>${r.target_name}</td>
+                    <td><span style="text-transform: uppercase; font-size: 11px;">${r.trigger}</span></td>
+                    <td style="color: #34D399; font-weight: 600;">${r.passed}</td>
+                    <td style="color: ${r.failed > 0 ? '#F43F5E' : '#94A3B8'}; font-weight: 600;">${r.failed}</td>
+                    <td><strong>${pRate}%</strong></td>
+                    <td>${r.duration_seconds ? r.duration_seconds.toFixed(1) + 's' : '--'}</td>
+                    <td>${new Date(r.started_at).toLocaleTimeString()}</td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    function switchTab(tab) {
+        document.getElementById("tabFindings").classList.toggle("active", tab === "findings");
+        document.getElementById("tabRegressions").classList.toggle("active", tab === "regressions");
+        document.getElementById("tabRuns").classList.toggle("active", tab === "runs");
+
+        document.getElementById("findingsView").style.display = tab === "findings" ? "block" : "none";
+        document.getElementById("regressionsView").style.display = tab === "regressions" ? "block" : "none";
+        document.getElementById("runsView").style.display = tab === "runs" ? "block" : "none";
+
+        if (tab === "findings") loadFindings();
+        else if (tab === "regressions") loadRegressions();
+        else if (tab === "runs") loadRuns();
+    }
+
+    function openFindingModal(finding) {
+        currentFinding = finding;
+        document.getElementById("modalTitle").innerText = finding.title;
+        const sevBadge = document.getElementById("modalSeverity");
+        sevBadge.className = `badge badge-${finding.severity}`;
+        sevBadge.innerText = finding.severity.toUpperCase();
+
+        document.getElementById("modalTarget").innerText = `${finding.target_name} (app v${finding.app_version || '1.0'})`;
+        document.getElementById("modalPayload").innerText = finding.reproduction_payload;
+        document.getElementById("modalResponse").innerText = finding.response_received || "No response text captured";
+        document.getElementById("modalMitigation").innerText = finding.suggested_mitigation;
+
+        const ghLink = document.getElementById("modalGithubLink");
+        if (finding.github_issue_url) {
+            ghLink.innerHTML = `<a href="${finding.github_issue_url}" target="_blank" style="color: #60A5FA; text-decoration: none; font-size: 13px;">🔗 GitHub Issue #${finding.github_issue_number}</a>`;
+        } else {
+            ghLink.innerHTML = `<span style="font-size: 12px; color: #64748B;">Not synced to GitHub</span>`;
+        }
+
+        const btn = document.getElementById("modalToggleStatusBtn");
+        btn.innerText = finding.status === "open" ? "Mark Fixed" : "Re-open Finding";
+
+        document.getElementById("findingModal").style.display = "flex";
+    }
+
+    function closeModal() {
+        document.getElementById("findingModal").style.display = "none";
+        currentFinding = null;
+    }
+
+    async function toggleFindingStatus() {
+        if (!currentFinding) return;
+        const newStatus = currentFinding.status === "open" ? "fixed" : "open";
+        try {
+            await fetch(`/api/findings/${currentFinding.id}/status`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: newStatus })
+            });
+            showToast(`Finding marked as ${newStatus}`);
+            closeModal();
+            fetchSummary();
+            loadFindings();
+        } catch (e) {
+            alert("Error updating status: " + e);
+        }
+    }
+
+    async function triggerRun() {
+        const btn = document.getElementById("launchBtn");
+        btn.disabled = true;
+        btn.innerHTML = `<span style="display:inline-block; animation: spin 1s linear infinite;">⏳</span> Running Battery...`;
+
+        const targetType = document.getElementById("targetType").value;
+        const targetUrl = document.getElementById("targetUrl").value;
+        const category = document.getElementById("attackCategory").value || null;
+
+        try {
+            const res = await fetch("/api/runs", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    target_type: targetType,
+                    target_url: targetUrl,
+                    category: category,
+                    trigger: "dashboard_manual"
+                })
+            });
+            const run = await res.json();
+            showToast(`Attack battery run dispatched! ID: ${run.id.substring(0, 8)}`);
+            setTimeout(() => {
+                fetchSummary();
+                loadFindings();
+                loadRuns();
+                btn.disabled = false;
+                btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Launch Battery`;
+            }, 3000);
+        } catch (e) {
+            alert("Failed to start run: " + e);
+            btn.disabled = false;
+            btn.innerHTML = `Launch Battery`;
+        }
+    }
+
+    async function seedBattery() {
+        try {
+            const res = await fetch("/api/attacks/seed?force_reload=true", { method: "POST" });
+            const data = await res.json();
+            showToast(data.message);
+            fetchSummary();
+        } catch (e) {
+            alert("Error reloading seeds: " + e);
+        }
+    }
+
+    async function runRegressionSuite() {
+        const targetType = document.getElementById("targetType").value;
+        const targetUrl = document.getElementById("targetUrl").value;
+        try {
+            const res = await fetch(`/api/regressions/run?target_type=${targetType}&target_url=${encodeURIComponent(targetUrl)}`, {
+                method: "POST"
+            });
+            const data = await res.json();
+            if (data.failed === 0) {
+                showToast(`✅ Regression Gate PASSED: 0 failures across permanent suite!`);
+            } else {
+                showToast(`⚠️ REGRESSION DETECTED: ${data.failed} vulnerabilities regressed!`);
+            }
+            fetchSummary();
+            loadRegressions();
+        } catch (e) {
+            alert("Error running regression suite: " + e);
+        }
+    }
+
+    // Auto-init
+    window.addEventListener("DOMContentLoaded", () => {
+        fetchSummary();
+        loadFindings();
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: redteam-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-redteam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-redteam_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-redteam_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-redteam} -d ${POSTGRES_DB:-redteam_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: redteam-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # Point the app at the postgres service (NOT localhost) inside the compose network.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-redteam}:${POSTGRES_PASSWORD:-redteam_secret}@postgres:5432/${POSTGRES_DB:-redteam_db}
+      # Authentication & CORS (strongly recommended when exposed).
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
+      API_KEY_HASHES: ${API_KEY_HASHES:-}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-}
+      # Optional integrations — default to disabled; override in .env to enable.
+      LLM_JUDGE_ENABLED: ${LLM_JUDGE_ENABLED:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GITHUB_ENABLED: ${GITHUB_ENABLED:-false}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_REPO: ${GITHUB_REPO:-}
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-false}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  pgdata:

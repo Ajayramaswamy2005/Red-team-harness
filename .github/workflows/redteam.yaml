@@ -1,0 +1,96 @@
+name: Automated Red-Team Security Gate
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Run nightly red-team battery at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Target Application URL'
+        required: false
+        default: 'http://localhost:8001/api/chat'
+      regression_only:
+        description: 'Run only regression suite (fast check)'
+        type: boolean
+        default: false
+
+jobs:
+  redteam-gate:
+    name: Adversarial Safety & Regression Gate
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: redteam
+          POSTGRES_PASSWORD: redteam_secret
+          POSTGRES_DB: redteam_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+
+      - name: Run Unit & Integration Tests
+        run: |
+          pytest tests/ -v --cov=src
+
+      - name: Start Red-Team Harness API
+        env:
+          DATABASE_URL: postgresql+asyncpg://redteam:redteam_secret@localhost:5432/redteam_db
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_ENABLED: true
+          # Ephemeral server bound to localhost inside the CI job: auth adds no
+          # security here and would just require managing a key hash in CI.
+          AUTH_ENABLED: false
+        run: |
+          nohup uvicorn src.api.server:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+
+      - name: Execute Security Gate Webhook
+        run: |
+          RESPONSE=$(curl -s -X POST http://localhost:8000/api/webhooks/ci \
+            -H "Content-Type: application/json" \
+            -d '{
+              "target_type": "http",
+              "target_url": "http://localhost:8000/api/mock/chat",
+              "commit_sha": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "app_version": "${{ github.sha }}",
+              "regression_only": ${{ github.event.inputs.regression_only || false }}
+            }')
+          
+          echo "Gate Response: $RESPONSE"
+          PASSED=$(echo $RESPONSE | jq -r '.passed')
+          REGRESSIONS=$(echo $RESPONSE | jq -r '.regressions_count')
+
+          if [ "$PASSED" != "true" ]; then
+            echo "::error::Red-team security gate FAILED! $REGRESSIONS vulnerabilities detected or regressed."
+            exit 1
+          fi
+
+          echo "✅ Security gate PASSED cleanly with 0 regressions."
